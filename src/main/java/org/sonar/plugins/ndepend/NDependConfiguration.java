@@ -69,6 +69,9 @@ public class NDependConfiguration implements BatchExtension, ServerExtension {
   }
 
   private String expandEnvironmentVariables(final String path) {
+    if(path == null) {
+      return path;
+    }
     final Pattern p = Pattern.compile("\\$\\{env:(\\w+)\\}");
     final Matcher m = p.matcher(path);
     if(!m.matches()) {
