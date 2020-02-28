@@ -22,6 +22,7 @@ package org.sonar.plugins.ndepend;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.rules.ExpectedException;
 import org.sonar.api.config.Settings;
 
@@ -33,7 +34,8 @@ public class NDependConfigurationTest {
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
-
+  @Rule
+  public EnvironmentVariables environmentVariables = new EnvironmentVariables();
   private Settings settings;
   private NDependConfiguration conf;
 
@@ -63,6 +65,40 @@ public class NDependConfigurationTest {
     File file = new File("src/test/resources/NDependConfigurationTest/file.txt");
     settings.setProperty(NDependPlugin.NDEPEND_PROJECT_PATH_PROPERTY_KEY, file.getAbsolutePath());
     assertThat(conf.ndependProjectPath()).isEqualTo(file.getAbsolutePath());
+  }
+
+  @Test
+  public void ndependProjectPath_IsEnvironmentVariable_ShouldBeExpanded() {
+    File file = new File("src/test/resources/NDependConfigurationTest/file.txt");
+    environmentVariables.set("ProjectPath", file.getAbsolutePath());
+    settings.setProperty(NDependPlugin.NDEPEND_PROJECT_PATH_PROPERTY_KEY, "${env:ProjectPath}");
+    assertThat(conf.ndependProjectPath()).isEqualTo(file.getAbsolutePath());
+  }
+
+  @Test
+  public void ndependProjectPath_IsEnvironmentVariableButNotSet_ShouldThrowException() {
+    settings.setProperty(NDependPlugin.NDEPEND_PROJECT_PATH_PROPERTY_KEY, "${env:ProjectPath}");
+
+    thrown.expect(IllegalArgumentException.class);
+    thrown.expectMessage("The path provided in the property \"" + NDependPlugin.NDEPEND_PROJECT_PATH_PROPERTY_KEY + "\" must be an absolute path: ${env:ProjectPath}");
+    conf.ndependProjectPath();
+  }
+
+  @Test
+  public void ndependRuleRunnerPath_IsEnvironmentVariable_ShouldBeExpanded() {
+    File file = new File("src/test/resources/NDependConfigurationTest/file.txt");
+    environmentVariables.set("RunnerPath", file.getAbsolutePath());
+    settings.setProperty(NDependPlugin.RULE_RUNNER_PATH_PROPERTY_KEY, "${env:RunnerPath}");
+    assertThat(conf.ruleRunnerPath()).isEqualTo(file.getAbsolutePath());
+  }
+
+  @Test
+  public void ndependRuleRunnerPath_IsEnvironmentVariableButNotSet_ShouldThrowException() {
+    settings.setProperty(NDependPlugin.RULE_RUNNER_PATH_PROPERTY_KEY, "${env:RunnerPath}");
+
+    thrown.expect(IllegalArgumentException.class);
+    thrown.expectMessage("The path provided in the property \"" + NDependPlugin.RULE_RUNNER_PATH_PROPERTY_KEY + "\" must be an absolute path: ${env:RunnerPath}");
+    conf.ruleRunnerPath();
   }
 
   @Test

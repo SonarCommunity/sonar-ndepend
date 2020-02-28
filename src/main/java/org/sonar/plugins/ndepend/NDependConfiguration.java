@@ -25,17 +25,20 @@ import org.sonar.api.ServerExtension;
 import org.sonar.api.config.Settings;
 
 import java.io.File;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class NDependConfiguration implements BatchExtension, ServerExtension {
 
   private final Settings settings;
 
-  public NDependConfiguration(Settings settings) {
+  public NDependConfiguration(final Settings settings) {
     this.settings = settings;
   }
 
   public String rules() {
-    String xml = settings.getString(NDependPlugin.RULES_PROPERTY_KEY);
+    final String xml = settings.getString(NDependPlugin.RULES_PROPERTY_KEY);
     return xml == null ? "" : xml;
   }
 
@@ -53,13 +56,32 @@ public class NDependConfiguration implements BatchExtension, ServerExtension {
 
   private String checkAbsolutePath(String property) {
     String path = settings.getString(property);
+    path = expandEnvironmentVariables(path);
     Preconditions.checkNotNull(path, "The property \"" + property + "\" must be set (to an absolute path).");
 
     File file = new File(path);
-    Preconditions.checkArgument(file.isAbsolute(), "The path provided in the property \"" + property + "\" must be an absolute path: " + path);
-    Preconditions.checkArgument(file.exists(), "The absolute path provided in the property \"" + property + "\" does not exist: " + path);
+    Preconditions.checkArgument(file.isAbsolute(),
+        "The path provided in the property \"" + property + "\" must be an absolute path: " + path);
+    Preconditions.checkArgument(file.exists(),
+        "The absolute path provided in the property \"" + property + "\" does not exist: " + path);
 
     return path;
+  }
+
+  private String expandEnvironmentVariables(final String path) {
+    final Pattern p = Pattern.compile("\\$\\{env:(\\w+)\\}");
+    final Matcher m = p.matcher(path);
+    if(!m.matches()) {
+      return path;
+    }
+    String envVarName = m.group(1);
+    Map<String,String> environment = System.getenv();
+    if(!environment.containsKey(envVarName)) {
+      return path;
+    }
+    String envVarValue = environment.get(envVarName);
+    String newPath = path.replace("${env:"+envVarName+"}", envVarValue);
+    return newPath;
   }
 
 }
